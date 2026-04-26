@@ -153,7 +153,17 @@ if search_btn:
             row["AI Reason"] = r.get("ai_reason", "")
         table_rows.append(row)
 
-    st.dataframe(table_rows, use_container_width=True, hide_index=True)
+    st.dataframe(
+        table_rows,
+        use_container_width=True,
+        hide_index=True,
+        wrap_text=True,
+        column_config={
+            "AI Reason": st.column_config.TextColumn(width="large"),
+            "AI Score": st.column_config.NumberColumn(width="small"),
+            "Keyword Match": st.column_config.TextColumn(width="small"),
+        },
+    )
 
     st.divider()
 
