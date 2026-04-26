@@ -45,47 +45,46 @@ with st.sidebar:
 
 
 # ── Gemini scoring ────────────────────────────────────────────────────────────
-def score_with_gemini(keyword: str, results: list[dict], api_key: str) -> list[dict]:
+def score_with_gemini(keyword: str, results: list[dict], api_key: str, on_progress=None) -> list[dict]:
     """Ask Gemini to score how relevant each result is to the search keyword.
 
     Returns a list of dicts with keys: score (1-10), reason (str).
     """
     client = genai.Client(api_key=api_key)
+    scores = []
 
-    entries = []
     for i, r in enumerate(results):
-        entry = f"{i+1}. Title: {r['chinese_title']} / {r['english_title']}"
+        entry = f"Title: {r['chinese_title']} / {r['english_title']}"
         if r["chinese_body"]:
-            entry += f"\n   Body: {r['chinese_body']} / {r['english_body']}"
-        entries.append(entry)
+            entry += f"\nBody: {r['chinese_body']} / {r['english_body']}"
 
-    prompt = f"""You are a Buddhist scholar. A user searched for the Chinese term: "{keyword}"
+        prompt = f"""You are a Buddhist scholar. A user searched for the Chinese term: "{keyword}"
 
-Below are dictionary entries returned by the search. Score each entry's relevance to the search term on a scale of 1 to 10, where:
+Score the relevance of the following dictionary entry to the search term on a scale of 1 to 10, where:
 - 10 = the entry is directly about this term
 - 5  = the entry is related but not a direct match
 - 1  = the entry is barely relevant
 
-Return ONLY a valid JSON array with one object per entry, in order. Each object must have:
+Return ONLY a valid JSON object with:
 - "score": integer 1-10
 - "reason": one short English sentence explaining the score
 
-Entries:
-{chr(10).join(entries)}
+Entry:
+{entry}
 
 JSON:"""
 
-    response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
-    raw = response.text.strip()
+        response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+        raw = response.text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        scores.append(json.loads(raw.strip()))
 
-    # Strip markdown code fences if present
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
+        if on_progress:
+            on_progress(i + 1, len(results))
 
-    scores = json.loads(raw)
     return scores
 
 
@@ -137,14 +136,23 @@ if search_btn:
         if not gemini_key:
             st.warning("AI scoring is unavailable: GEMINI_API_KEY is not configured.")
         else:
-            with st.spinner("Scoring relevance with Gemini…"):
-                try:
-                    scores = score_with_gemini(keyword, results, gemini_key)
-                    for i, r in enumerate(results):
-                        r["ai_score"] = scores[i].get("score")
-                        r["ai_reason"] = scores[i].get("reason", "")
-                except Exception as e:
-                    st.warning(f"AI scoring failed: {e}")
+            ai_status = st.empty()
+            ai_progress = st.progress(0.0)
+
+            def on_ai_progress(current, total):
+                ai_status.text(f"Scoring entry {current} of {total} with Gemini…")
+                ai_progress.progress(current / total)
+
+            try:
+                scores = score_with_gemini(keyword, results, gemini_key, on_progress=on_ai_progress)
+                for i, r in enumerate(results):
+                    r["ai_score"] = scores[i].get("score")
+                    r["ai_reason"] = scores[i].get("reason", "")
+            except Exception as e:
+                st.warning(f"AI scoring failed: {e}")
+            finally:
+                ai_progress.empty()
+                ai_status.empty()
 
     # ── Sort: keyword match first, then AI score ──────────────────────────────
     results.sort(
