@@ -111,8 +111,20 @@ if search_btn:
         st.stop()
 
     # ── Search ────────────────────────────────────────────────────────────────
-    with st.spinner(f"Scanning {max_pages} page(s) for '{keyword}'…"):
-        results = lookup(keyword, max_results=max_results, max_pages=max_pages)
+    status = st.empty()
+    progress = st.progress(0.0)
+
+    def on_progress(stage, current, total):
+        if stage == "page":
+            status.text(f"Scanning page {current} of {total}…")
+            progress.progress(current / total * 0.5)
+        elif stage == "detail":
+            status.text(f"Fetching entry {current} of {total}…")
+            progress.progress(0.5 + current / total * 0.5)
+
+    results = lookup(keyword, max_results=max_results, max_pages=max_pages, on_progress=on_progress)
+    progress.empty()
+    status.empty()
 
     if not results:
         st.error("No results found. Try a different term or increase the number of pages.")
@@ -153,17 +165,7 @@ if search_btn:
             row["AI Reason"] = r.get("ai_reason", "")
         table_rows.append(row)
 
-    st.dataframe(
-        table_rows,
-        use_container_width=True,
-        hide_index=True,
-        wrap_text=True,
-        column_config={
-            "AI Reason": st.column_config.TextColumn(width="large"),
-            "AI Score": st.column_config.NumberColumn(width="small"),
-            "Keyword Match": st.column_config.TextColumn(width="small"),
-        },
-    )
+    st.table(table_rows)
 
     st.divider()
 

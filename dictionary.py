@@ -106,7 +106,7 @@ def _rank_title(title: str, keyword: str) -> int:
     return 1
 
 
-def lookup(keyword: str, max_results: int = 5, max_pages: int = 3) -> list[dict]:
+def lookup(keyword: str, max_results: int = 5, max_pages: int = 3, on_progress=None) -> list[dict]:
     """Search the FGS Buddhist dictionary and return full entry details.
 
     Fetches up to max_pages of search results (10 per page), ranks all
@@ -150,6 +150,8 @@ def lookup(keyword: str, max_results: int = 5, max_pages: int = 3) -> list[dict]
 
         if not page_items:
             print("  No results on this page — stopping pagination early")
+            if on_progress:
+                on_progress("page", max_pages, max_pages)
             break
 
         for item in page_items:
@@ -161,6 +163,9 @@ def lookup(keyword: str, max_results: int = 5, max_pages: int = 3) -> list[dict]
             href = link_tag["href"]
             candidates.append((title, href))
             print(f"    - {title!r}  →  {href}")
+
+        if on_progress:
+            on_progress("page", page_num, max_pages)
 
     print(f"\n  Total candidates collected: {len(candidates)}")
 
@@ -180,6 +185,8 @@ def lookup(keyword: str, max_results: int = 5, max_pages: int = 3) -> list[dict]
     results = []
     for i, (title, href) in enumerate(top_candidates):
         print(f"\n  [{i+1}/{len(top_candidates)}] {title!r}")
+        if on_progress:
+            on_progress("detail", i + 1, len(top_candidates))
         detail = _fetch_detail(href)
         if detail:
             results.append(detail)
