@@ -52,6 +52,8 @@ def _fetch_detail(path: str) -> dict:
     category = ""
     chinese_body = ""
     english_body = ""
+    chinese_body_html = ""
+    english_body_html = ""
     reference = ""
 
     title_tags = content.select("div.title")
@@ -74,10 +76,13 @@ def _fetch_detail(path: str) -> dict:
             if len(columns) >= 2:
                 chinese_body = columns[0].get_text(strip=True)
                 english_body = columns[1].get_text(" ", strip=True)
+                chinese_body_html = columns[0].decode_contents().strip()
+                english_body_html = columns[1].decode_contents().strip()
                 print(f"        Chinese body: {chinese_body!r}")
                 print(f"        English body: {english_body!r}")
             else:
                 english_body = text_tag.get_text(strip=True)
+                english_body_html = text_tag.decode_contents().strip()
                 print(f"        Single-column body: {english_body!r}")
 
         elif label == "References":
@@ -90,6 +95,8 @@ def _fetch_detail(path: str) -> dict:
         "category": category,
         "chinese_body": chinese_body,
         "english_body": english_body,
+        "chinese_body_html": chinese_body_html,
+        "english_body_html": english_body_html,
         "reference": reference,
     }
 

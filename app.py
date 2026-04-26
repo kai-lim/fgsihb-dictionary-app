@@ -191,14 +191,14 @@ if search_btn:
             with col1:
                 st.markdown("**Chinese**")
                 st.write(r["chinese_title"])
-                if r["chinese_body"]:
-                    st.write(r["chinese_body"])
+                if r["chinese_body_html"]:
+                    st.markdown(r["chinese_body_html"], unsafe_allow_html=True)
 
             with col2:
                 st.markdown("**English**")
                 st.write(r["english_title"])
-                if r["english_body"]:
-                    st.write(r["english_body"])
+                if r["english_body_html"]:
+                    st.markdown(r["english_body_html"], unsafe_allow_html=True)
 
             if r["category"]:
                 st.caption(f"Category: {r['category']}")
