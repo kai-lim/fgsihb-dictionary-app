@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 st.title("☸️ FGS Buddhist Dictionary")
-st.caption("Search the Fo Guang Shan dictionary with optional AI relevance scoring")
+st.caption("Search the Fo Guang Shan dictionary with keyword matching and optional AI relevance scoring")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -25,7 +25,7 @@ with st.sidebar:
 
     max_pages = st.slider(
         "Pages to scan",
-        min_value=1, max_value=10, value=3,
+        min_value=1, max_value=15, value=3,
         help="The site shows 10 results per page. More pages = wider coverage but slower.",
     )
     max_results = st.slider(
@@ -134,10 +134,32 @@ if search_btn:
                 except Exception as e:
                     st.warning(f"AI scoring failed: {e}")
 
-    # ── Results ───────────────────────────────────────────────────────────────
+    # ── Sort: keyword match first, then AI score ──────────────────────────────
+    results.sort(
+        key=lambda r: (_rank_title(r["chinese_title"], keyword), r.get("ai_score") or 0),
+        reverse=True,
+    )
+
+    # ── Summary table ─────────────────────────────────────────────────────────
+    table_rows = []
+    for r in results:
+        row = {
+            "Chinese": r["chinese_title"],
+            "English": r["english_title"],
+            "Keyword Match": RANK_LABELS[_rank_title(r["chinese_title"], keyword)][0],
+        }
+        if enable_scoring:
+            row["AI Score"] = r["ai_score"] if r.get("ai_score") is not None else "—"
+            row["AI Reason"] = r.get("ai_reason", "")
+        table_rows.append(row)
+
+    st.dataframe(table_rows, use_container_width=True, hide_index=True)
+
+    st.divider()
+
+    # ── Detailed entries ──────────────────────────────────────────────────────
     for i, r in enumerate(results):
         badge = rank_badge(r["chinese_title"], keyword)
-
         header = f"**{i+1}. {r['chinese_title']}** — {r['english_title']}   {badge}"
         if r.get("ai_score") is not None:
             score_colour = "🟢" if r["ai_score"] >= 8 else "🟡" if r["ai_score"] >= 5 else "🔴"
