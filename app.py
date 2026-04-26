@@ -36,7 +36,7 @@ with st.sidebar:
 
     st.divider()
     st.header("AI relevance scoring")
-    enable_scoring = st.toggle("Score results with Gemini", value=False)
+    enable_scoring = st.toggle("Score results with Gemini", value=True)
 
     gemini_key = os.getenv("GEMINI_API_KEY", "")
 
